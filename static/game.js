@@ -31,6 +31,12 @@ socket.on('start_game', (data) => {
   }
 });
 
+socket.on('start_game_2_2', (data) => {
+  if (data.room === roomCode) {
+    window.location.href = `/game_mode_2_2?room=${roomCode}`;
+  }
+});
+
 socket.on('error', (data) => {
   alert(data.message);
   window.location.href = '/';
