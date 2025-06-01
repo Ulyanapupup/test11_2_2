@@ -9,7 +9,7 @@ let currentRoles = { guesser: null, creator: null };
 // Подключение к комнате
 socket.emit('join_game_room_2_2', { room, session_id: sessionId });
 
-socket.on('redirect_2_2', (data) => {
+socket.on('redirect', (data) => {
     console.log('Redirecting to:', data.url);
     window.location.href = data.url;
 });
@@ -29,6 +29,11 @@ socket.on('roles_updated_2_2', (data) => {
 
 socket.on('role_taken_2_2', (data) => {
     alert(`Роль "${getRoleName(data.role)}" уже занята другим игроком!`);
+});
+
+socket.on('player_left', () => {
+    alert('Другой игрок покинул игру. Вы будете перенаправлены в комнату.');
+    window.location.href = `/game?room=${room}`;
 });
 
 // Вспомогательные функции

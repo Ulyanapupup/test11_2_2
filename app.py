@@ -476,8 +476,27 @@ def handle_reply_logic(data):
 
 
 
+@socketio.on('join_game_room_2_2')
+def handle_join_game_room_2_2(data):
+    room = data['room']
+    session_id = data['session_id']
+    sid = request.sid
+
+    join_room(room)
+    session_to_sid[session_id] = sid  # сохраняем socket.id
+
+    # Инициализация комнаты если её нет
+    if room not in room_roles:
+        room_roles[room] = {'guesser': None, 'creator': None}
+
+    emit('roles_updated_2_2', {
+        'roles': room_roles[room],
+        'your_role': next((role for role, sid in room_roles[room].items() if sid == session_id), None)
+    }, to=sid)
+    
 @socketio.on('select_role_2_2')
 def handle_select_role_2_2(data):
+    print(f"Выбор роли 2.2: комната {data['room']}, игрок {data['session_id']}, роль {data['role']}")
     room = data['room']
     session_id = data['session_id']
     role = data['role']
@@ -485,7 +504,7 @@ def handle_select_role_2_2(data):
     if room not in room_roles:
         room_roles[room] = {'guesser': None, 'creator': None}
     
-    # Освобождаем предыдущие роли
+    # Освобождаем предыдущие роли этого игрока
     for r in ['guesser', 'creator']:
         if room_roles[room][r] == session_id:
             room_roles[room][r] = None
@@ -493,8 +512,15 @@ def handle_select_role_2_2(data):
     # Назначаем новую роль
     room_roles[room][role] = session_id
     
+    # Обновляем роли в основной структуре rooms
+    if room in rooms:
+        if 'roles' not in rooms[room]:
+            rooms[room]['roles'] = {}
+        rooms[room]['roles'][session_id] = role
+    
     emit('roles_updated_2_2', {
-        'roles': room_roles[room]
+        'roles': room_roles[room],
+        'your_role': role
     }, room=room)
     
 @socketio.on('start_game_2_2')
@@ -516,8 +542,10 @@ def handle_start_game_2_2(data):
         if not guesser_sid or not creator_sid:
             return {'status': 'error', 'message': 'Один из игроков отключён'}
         
+        # Создаем экземпляр игры
         game_sessions_2_2[room] = Game2_2()
         
+        # Отправляем редирект на соответствующие страницы
         emit('redirect_2_2', {'url': f'/game2/guesser_2_2?room={room}'}, to=guesser_sid)
         emit('redirect_2_2', {'url': f'/game2/creator_2_2?room={room}'}, to=creator_sid)
         
