@@ -12,6 +12,7 @@ from flask_socketio import SocketIO, send, join_room, leave_room, emit
 from game_logic import mode_1_1
 from game_logic.mode_1_2 import Game  # импорт класса Game из mode_1_2
 
+from game_logic.mode_2_1 import Game2_1
 from game_logic.mode_2_2 import Game2_2
 
 app = Flask(__name__)
@@ -23,7 +24,7 @@ games = {}  # хранилище активных игр для режима 1.2
 room_roles = {}  # {room_code: {'guesser': session_id, 'creator': session_id}}
 
 game_sessions = {}  # {'ROOM123': Game2_1()}
-game_sessions_2_2 = {}  # {'ROOM123': Game2_2()}
+game_sessions_2_2 = {}
 
 # Хранилище комнат для сетевой игры режимов 2.1 и 2.2
 rooms = {}
@@ -214,9 +215,9 @@ def on_choose_mode(data):
     if room in rooms:
         rooms[room]['mode'] = mode
         if mode == '2.1':
-            emit('redirect', {'url': f'/game_mode_2_1?room={room}'}, room=room)
+            emit('start_game', {'room': room, 'mode': mode}, room=room)
         elif mode == '2.2':
-            emit('redirect', {'url': f'/game_mode_2_2?room={room}'}, room=room)
+            emit('start_game_2_2', {'room': room, 'mode': mode}, room=room)
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -472,9 +473,9 @@ def handle_reply_logic(data):
 
 
 
-# Обработчик выбора роли для режима 2.2
-@socketio.on('choose_role_2_2')
-def handle_choose_role_2_2(data):
+
+@socketio.on('select_role_2_2')
+def handle_select_role_2_2(data):
     room = data['room']
     session_id = data['session_id']
     role = data['role']
@@ -482,7 +483,7 @@ def handle_choose_role_2_2(data):
     if room not in room_roles:
         room_roles[room] = {'guesser': None, 'creator': None}
     
-    # Освобождаем предыдущие роли этого игрока
+    # Освобождаем предыдущие роли
     for r in ['guesser', 'creator']:
         if room_roles[room][r] == session_id:
             room_roles[room][r] = None
@@ -493,12 +494,11 @@ def handle_choose_role_2_2(data):
     emit('roles_updated_2_2', {
         'roles': room_roles[room]
     }, room=room)
-
-# Обработчик начала игры для режима 2.2
+    
 @socketio.on('start_game_2_2')
 def handle_start_game_2_2(data):
     room = data['room']
-    session_id = data['session_id']
+    session_id = session.get('session_id')
     roles = room_roles.get(room, {})
     
     if not roles:
@@ -514,18 +514,15 @@ def handle_start_game_2_2(data):
         if not guesser_sid or not creator_sid:
             return {'status': 'error', 'message': 'Один из игроков отключён'}
         
-        # Создаем экземпляр игры для комнаты
         game_sessions_2_2[room] = Game2_2()
         
-        # Перенаправляем игроков
         emit('redirect_2_2', {'url': f'/game2/guesser_2_2?room={room}'}, to=guesser_sid)
         emit('redirect_2_2', {'url': f'/game2/creator_2_2?room={room}'}, to=creator_sid)
         
         return {'status': 'ok'}
     else:
         return {'status': 'error', 'message': 'Оба игрока должны выбрать разные роли!'}
-
-# Маршруты для режима 2.2
+        
 @app.route('/game2/guesser_2_2')
 def game_guesser_2_2():
     room = request.args.get('room')
@@ -536,7 +533,7 @@ def game_creator_2_2():
     room = request.args.get('room')
     return render_template('game2/creator_2_2.html', room=room, session=session)
 
-
+# Обработчики логики игры для режима 2.2
 @socketio.on('guess_logic_2_2')
 def handle_guess_logic_2_2(data):
     room = data['room']
@@ -552,7 +549,7 @@ def handle_guess_logic_2_2(data):
     creator_sid = session_to_sid.get(room_roles[room]['creator'])
     if creator_sid:
         emit('need_answer_2_2', {'question': message}, to=creator_sid)
-
+        
 @socketio.on('reply_logic_2_2')
 def handle_reply_logic_2_2(data):
     room = data['room']
@@ -580,7 +577,7 @@ def handle_reply_logic_2_2(data):
             'correct': result['correct'],
             'value': result['guess']
         }, to=guesser_sid)
-        
+
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
