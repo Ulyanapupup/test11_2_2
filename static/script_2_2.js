@@ -9,8 +9,8 @@ let currentRoles = { guesser: null, creator: null };
 // Подключение к комнате
 socket.emit('join_game_room_2_2', { room, session_id: sessionId });
 
-socket.on('redirect', (data) => {
-    console.log('Redirecting to:', data.url);
+socket.on('redirect_2_2', (data) => {
+    console.log('Redirecting (2.2) to:', data.url);
     window.location.href = data.url;
 });
 
@@ -79,10 +79,14 @@ function updateUI() {
 
 function startGame() {
     if (canStartGame()) {
+        console.log('Attempting to start 2.2 game in room:', room);
+        
         socket.emit('start_game_2_2', { room }, (response) => {
             if (response && response.status === 'ok') {
-                console.log('Game started successfully');
+                console.log('2.2 Game started successfully, waiting for redirect...');
+                // Здесь не нужно делать ничего, сервер сам отправит redirect_2_2
             } else {
+                console.error('Start error:', response?.message || 'Unknown error');
                 alert(response?.message || 'Ошибка запуска игры');
             }
         });

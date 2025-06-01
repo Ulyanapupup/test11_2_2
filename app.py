@@ -542,10 +542,13 @@ def handle_start_game_2_2(data):
         if not guesser_sid or not creator_sid:
             return {'status': 'error', 'message': 'Один из игроков отключён'}
         
-        # Создаем экземпляр игры
         game_sessions_2_2[room] = Game2_2()
         
-        # Отправляем редирект на соответствующие страницы
+        # Добавьте логирование
+        print(f"Starting game 2.2 in room {room}")
+        print(f"Guesser: {guesser_id}, Creator: {creator_id}")
+        
+        # Отправляем редирект
         emit('redirect_2_2', {'url': f'/game2/guesser_2_2?room={room}'}, to=guesser_sid)
         emit('redirect_2_2', {'url': f'/game2/creator_2_2?room={room}'}, to=creator_sid)
         
