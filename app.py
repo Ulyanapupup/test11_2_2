@@ -215,8 +215,10 @@ def on_choose_mode(data):
     if room in rooms:
         rooms[room]['mode'] = mode
         if mode == '2.1':
+            game_sessions[room] = Game2_1()
             emit('start_game', {'room': room, 'mode': mode}, room=room)
         elif mode == '2.2':
+            game_sessions_2_2[room] = Game2_2()
             emit('start_game_2_2', {'room': room, 'mode': mode}, room=room)
 
 @socketio.on('disconnect')
